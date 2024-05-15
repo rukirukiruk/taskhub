@@ -11,24 +11,26 @@ interface Task {
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<Error | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || '';
 
   const fetchTasks = async () => {
     setLoading(true);
+    setError(null);
     try {
       const response = await axios.get<Task[]>(`${API_ENDPOINT}/tasks`);
       setTasks(response.data);
-      setLoading(false);
     } catch (error) {
-      setError(error as Error);
+      setError(getErrorMessage(error));
+    } finally {
       setLoading(false);
     }
   };
 
   const saveTask = async (task: Task) => {
     setLoading(true);
+    setError(null);
     try {
       if (task.id) {
         await axios.put(`${API_ENDPOINT}/tasks/${task.id}`, task);
@@ -37,7 +39,7 @@ export const useTasks = () => {
       }
       await fetchTasks();
     } catch (error) {
-      setError(error as Error);
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -45,11 +47,12 @@ export const useTasks = () => {
 
   const deleteTask = async (taskId: number) => {
     setLoading(true);
+    setError(null);
     try {
       await axios.delete(`${API_ENDPOINT}/tasks/${taskId}`);
       await fetchTasks();
     } catch (error) {
-      setError(error as Error);
+      setError(getErrorMessage(error));
     } finally {
       setLoading(false);
     }
@@ -58,6 +61,13 @@ export const useTasks = () => {
   useEffect(() => {
     fetchTasks();
   }, []);
+
+  function getErrorMessage(error: any): string {
+    if (axios.isAxiosError(error)) {
+      return error.response?.data?.message || error.message;
+    }
+    return error?.message || "An unknown error occurred";
+  }
 
   return { tasks, loading, error, fetchTasks, saveTask, deleteTask };
 };
