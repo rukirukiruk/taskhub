@@ -8,19 +8,40 @@ interface Task {
   completed: boolean;
 }
 
+interface TaskCache {
+  lastFetch: number;
+  data: Task[];
+}
+
 export const useTasks = () => {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Cache settings
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const cache: TaskCache = {
+    lastFetch: 0,
+    data: [],
+  };
+
   const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || '';
 
   const fetchTasks = async () => {
+    const now = new Date().getTime();
+
+    if (now - cache.lastFetch < CACHE_DURATION && cache.data.length > 0) {
+      setTasks(cache.data);
+      return; // Return cached data if it is still fresh
+    }
+
     setLoading(true);
     setError(null);
     try {
       const response = await axios.get<Task[]>(`${API_ENDPOINT}/tasks`);
       setTasks(response.data);
+      cache.data = response.data; // Update cache
+      cache.lastFetch = now; // Update cache timestamp
     } catch (error) {
       setError(getErrorMessage(error));
     } finally {
@@ -37,7 +58,8 @@ export const useTasks = () => {
       } else {
         await axios.post(`${API_ENDPOINT}/tasks`, task);
       }
-      await fetchTasks();
+      cache.lastFetch = 0; // Invalidate cache
+      await fetchTasks(); // Refetch tasks to update cache
     } catch (error) {
       setError(getErrorMessage(error));
     } finally {
@@ -50,7 +72,8 @@ export const useTasks = () => {
     setError(null);
     try {
       await axios.delete(`${API_ENDPOINT}/tasks/${taskId}`);
-      await fetchTasks();
+      cache.lastFetch = 0; // Invalidate cache
+      await fetchTasks(); // Refetch tasks to update cache
     } catch (error) {
       setError(getErrorMessage(error));
     } finally {
