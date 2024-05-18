@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 
 interface Task {
     id: number;
@@ -25,10 +25,10 @@ const TaskManager: React.FC = () => {
     const [newTaskDeadline, setNewTaskDeadline] = useState('');
 
     useEffect(() => {
-        // Future enhancement: Fetch tasks from an API or Local Storage
+        // Placeholder for future enhancements
     }, []);
 
-    const addNewTask = () => {
+    const addNewTask = useCallback(() => {
         const newId = tasks.length > 0 ? Math.max(...tasks.map(t => t.id)) + 1 : 1;
         const newTask: Task = {
             id: newId,
@@ -37,20 +37,20 @@ const TaskManager: React.FC = () => {
             status: 'pending',
             deadline: new Date(newTaskDeadline),
         };
-        setTasks([...tasks, newTask]);
+        setTasks((prevTasks) => [...prevTasks, newTask]);
         setNewTaskName('');
         setNewTaskPriority('low');
         setNewTaskDeadline('');
-    };
+    }, [newTaskName, newTaskPriority, newTaskDeadline, tasks]);
 
-    const updateTaskStatus = (id: number, status: Task['status']) => {
-        const updatedTasks = tasks.map(task =>
-            task.id === id ? { ...task, status } : task
+    const updateTaskStatus = useCallback((id: number, status: Task['status']) => {
+        setTasks((prevTasks) =>
+            prevTasks.map(task =>
+            task.id === id ? { ...task, status } : task)
         );
-        setTasks(updatedTasks);
-    };
+    }, []);
 
-    const renderTasks = () => {
+    const renderTasks = useCallback(() => {
         return tasks.map(task => (
             <div key={task.id}>
                 <p>{task.name}</p>
@@ -61,7 +61,7 @@ const TaskManager: React.FC = () => {
                 <button onClick={() => updateTaskStatus(task.id, 'completed')}>Complete</button>
             </div>
         ));
-    };
+    }, [tasks, updateTaskStatus]);
 
     return (
         <div>
