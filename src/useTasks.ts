@@ -9,88 +9,87 @@ interface Task {
 }
 
 interface TaskCache {
-  lastFetch: number;
-  data: Task[];
+  lastFetchTimestamp: number;
+  tasks: Task[];
 }
 
-export const useTasks = () => {
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
+export const useTaskManagement = () => {
+  const [taskList, setTaskList] = useState<Task[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  // Cache settings
-  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
-  const cache: TaskCache = {
-    lastFetch: 0,
-    data: [],
+  const CACHE_LIFESPAN_MS = 5 * 60 * 1000;
+  const taskCache: TaskCache = {
+    lastFetchTimestamp: 0,
+    tasks: [],
   };
 
-  const API_ENDPOINT = process.env.REACT_APP_API_ENDPOINT || '';
+  const TASK_API_URL = process.env.REACT_APP_API_ENDPOINT || '';
 
-  const fetchTasks = async () => {
-    const now = new Date().getTime();
+  const retrieveTasksFromAPI = async () => {
+    const currentTime = new Date().getTime();
 
-    if (now - cache.lastFetch < CACHE_DURATION && cache.data.length > 0) {
-      setTasks(cache.data);
-      return; // Return cached data if it is still fresh
+    if (currentTime - taskCache.lastFetchTimestamp < CACHE_LIFESPAN_MS && taskCache.tasks.length > 0) {
+      setTaskList(taskCache.tasks);
+      return;
     }
 
-    setLoading(true);
-    setError(null);
+    setIsLoading(true);
+    setFetchError(null);
     try {
-      const response = await axios.get<Task[]>(`${API_ENDPOINT}/tasks`);
-      setTasks(response.data);
-      cache.data = response.data; // Update cache
-      cache.lastFetch = now; // Update cache timestamp
+      const response = await axios.get<Task[]>(`${TASK_API_URL}/tasks`);
+      setTaskList(response.data);
+      taskCache.tasks = response.data;
+      taskCache.lastFetchTimestamp = currentTime;
     } catch (error) {
-      setError(getErrorMessage(error));
+      setFetchError(extractErrorMessage(error));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const saveTask = async (task: Task) => {
-    setLoading(true);
-    setError(null);
+  const persistTaskToAPI = async (task: Task) => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
       if (task.id) {
-        await axios.put(`${API_ENDPOINT}/tasks/${task.id}`, task);
+        await axios.put(`${TASK_API_URL}/tasks/${task.id}`, task);
       } else {
-        await axios.post(`${API_ENDPOINT}/tasks`, task);
+        await axios.post(`${TASK_API_URL}/tasks`, task);
       }
-      cache.lastFetch = 0; // Invalidate cache
-      await fetchTasks(); // Refetch tasks to update cache
+      taskCache.lastFetchTimestamp = 0;
+      await retrieveTasksFromAPI();
     } catch (error) {
-      setError(getErrorMessage(error));
+      setFetchError(extractErrorMessage(error));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  const deleteTask = async (taskId: number) => {
-    setLoading(true);
-    setError(null);
+  const deleteTaskById = async (taskId: number) => {
+    setIsLoading(true);
+    setFetchError(null);
     try {
-      await axios.delete(`${API_ENDPOINT}/tasks/${taskId}`);
-      cache.lastFetch = 0; // Invalidate cache
-      await fetchTasks(); // Refetch tasks to update cache
+      await axios.delete(`${TASK_API_URL}/tasks/${taskId}`);
+      taskCache.lastFetchTimestamp = 0;
+      await retrieveTasksFromAPI();
     } catch (error) {
-      setError(getErrorMessage(error));
+      setFetchError(extractErrorMessage(error));
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchTasks();
+    retrieveTasksFromAPI();
   }, []);
 
-  function getErrorMessage(error: any): string {
+  function extractErrorMessage(error: any): string {
     if (axios.isAxiosError(error)) {
       return error.response?.data?.message || error.message;
     }
-    return error?.message || "An unknown error occurred";
+    return error?.message || "An unexpected error occurred";
   }
 
-  return { tasks, loading, error, fetchTasks, saveTask, deleteTask };
+  return { tasks: taskList, loading: isLoading, error: fetchError, fetchTasks: retrieveTasksFromAPI, saveTask: persistTaskToAPI, deleteTask: deleteTaskById };
 };
