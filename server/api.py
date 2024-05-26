@@ -1,7 +1,6 @@
 from flask import Flask, request, jsonify
 from flask_sqlalchemy import SQLAlchemy
 import os
-from contextlib import contextmanager
 
 app = Flask(__name__)
 
@@ -25,18 +24,6 @@ class Task(db.Model):
 def create_tables():
     db.create_all()
 
-@contextmanager
-def managed_session():
-    """Context manager for database session management"""
-    try:
-        yield db.session
-    except Exception as e:
-        db.session.rollback()
-        app.logger.error(f"Session rollback due to exception: {e}")
-        raise
-    finally:
-        db.session.close()
-
 def validate_task_data(data):
     if 'title' not in data or not data['title'].strip():
         raise ValueError("Task 'title' is required and must not be empty.")
@@ -48,28 +35,28 @@ def create_task(project_id):
         data = request.get_json()
         validate_task_data(data)
         new_task = Task(title=data['title'], description=data.get('description', ''), project_id=project_id)
-        with managed_session() as session:
-            session.add(new_task)
-            session.commit()
+        db.session.add(new_task)
+        db.session.commit()
         return jsonify({'message': 'Task created', 'task': { 'id': new_task.id, 'title': new_task.title }}), 201
     except ValueError as ve:
         return jsonify({'error': str(ve)}), 400
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': 'Failed to create task due to an internal error.'}), 500
 
 @app.route('/projects/<int:project_id>/tasks/<int:task_id>', methods=['PUT'])
 def update_task(project_id, task_id):
     try:
         data = request.get_json()
-        with managed_session() as session:
-            task = session.query(Task).filter_by(id=task_id, project_id=project_id).first()
-            if not task:
-                return jsonify({'message': 'Task not found'}), 404
-            task.title = data.get('title', task.title)
-            task.description = data.get('description', task.description)
-            session.commit()
+        task = Task.query.filter_by(id=task_id, project_id=project_id).first()
+        if not task:
+            return jsonify({'message': 'Task not found'}), 404
+        task.title = data.get('title', task.title)
+        task.description = data.get('description', task.description)
+        db.session.commit()
         return jsonify({'message': 'Task updated', 'task': { 'id': task.id, 'title': task.title }})
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': 'Failed to update task due to an internal error.'}), 500
 
 @app.route('/projects/<int:project_id>/tasks', methods=['GET'])
@@ -88,11 +75,11 @@ def create_project():
         if not data.get('name'):
             return jsonify({'error': "Project 'name' is required"}), 400
         new_project = Project(name=data['name'])
-        with managed_session() as session:
-            session.add(new_project)
-            session.commit()
+        db.session.add(new_project)
+        db.session.commit()
         return jsonify({'message': 'Project created', 'project': {'id': new_project.id, 'name': new_project.name}}), 201
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': 'Failed to create project due to an internal error.'}), 500
 
 if __name__ == '__main__':
