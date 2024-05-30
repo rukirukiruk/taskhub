@@ -3,6 +3,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_restful import Api, Resource, reqparse, fields, marshal_with
 import os
 from dotenv import load_dotenv
+from datetime import datetime
 
 load_dotenv()  # take environment variables from .env.
 
@@ -39,6 +40,13 @@ project_fields = {
     'id': fields.Integer,
     'name': fields.String,
     'description': fields.String,
+    'tasks': fields.List(fields.Nested({
+        'id': fields.Integer,
+        'description': fields.String,
+        'priority': fields.Integer,
+        'deadline': fields.String,
+        'project_id': fields.Integer,
+    }))
 }
 
 task_fields = {
@@ -72,6 +80,7 @@ class ProjectResource(Resource):
         project = Project.query.filter_by(id=id).first()
         if not project:
             return {'message': 'Project not found'}, 404
+        db.session.refresh(project)  # Refresh the object to ensure tasks are loaded for serialization.
         return project
 
     def delete(self, id):
@@ -92,7 +101,7 @@ class TaskListResource(Resource):
         parser = reqparse.RequestParser()
         parser.add_argument('description', required=True, help="Description cannot be blank!")
         parser.add_argument('priority', type=int)
-        parser.add_argument('deadline')
+        parser.add_argument('deadline', type=lambda x: datetime.strptime(x, '%Y-%m-%d') if x else None)
         args = parser.parse_args()
         
         task = Task(description=args['description'], priority=args.get('priority'), deadline=args.get('deadline'), project_id=project_id)
