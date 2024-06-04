@@ -7,16 +7,16 @@ import { MyComponent } from './MyComponent';
 process.env.REACT_APP_API_URL = 'http://localhost/api';
 
 describe('MyComponent Tests', () => {
-  it('should render correctly', () => {
+  it('renders the component content as expected', () => {
     try {
       const { getByText } = render(<MyComponent />);
       expect(getByText('Component content')).toBeInTheDocument();
     } catch (error) {
-      console.error("Error in 'should render correctly' test:", error);
+      console.error("Error in 'renders the component content as expected' test:", error);
     }
   });
 
-  it('should handle user input', async () => {
+  it('responds to user input changes correctly', async () => {
     try {
       const { getByLabelText, getByText } = render(<MyComponent />);
 
@@ -26,11 +26,11 @@ describe('MyComponent Tests', () => {
 
       expect(getByText('Input has changed')).toBeInTheDocument();
     } catch (error) {
-      console.error("Error in 'should handle user input' test:", error);
+      console.error("Error in 'responds to user input changes correctly' test:", error);
     }
   });
 
-  it('should update and reflect state changes', async () => {
+  it('updates and displays new state following user interaction', async () => {
     try {
       const { getByText, getByTestId } = render(<MyComponent />);
       
@@ -38,21 +38,21 @@ describe('MyComponent Tests', () => {
         fireEvent.click(getByText('Change State Button'));
       });
       
-      const stateDisplayElement = getByTestId('state-display');
-      expect(stateDisplayElement).toHaveTextContent('New State');
+      const stateValueElement = getByTestId('state-display');
+      expect(stateValueElement).toHaveTextContent('New State');
     } catch (error) {
-      console.error("Error in 'should update and reflect state changes' test:", error);
+      console.error("Error in 'updates and displays new state following user interaction' test:", error);
     }
   });
 
-  it('fetches data and updates state accordingly', async () => {
+  it('correctly fetches and displays data from an API', async () => {
     try {
-      const { getByText, findByText } = render(<MyComponent />);
+      const { findByText } = render(<MyComponent />);
       
-      const fetchedDataDisplay = await findByText('Fetched Data Display');
-      expect(fetchedDataDisplay).toBeInTheDocument();
+      const apiDataDisplayElement = await findByText('Fetched Data Display');
+      expect(apiDataDisplayElement).toBeInTheDocument();
     } catch (error) {
-      console.error("Error in 'fetches data and updates state accordingly' test:", error);
+      console.error("Error in 'correctly fetches and displays data from an API' test:", error);
     }
   });
 });
