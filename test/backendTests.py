@@ -5,59 +5,59 @@ import logging
 from dotenv import load_dotenv
 
 load_dotenv()
-BASE_URL = os.getenv("API_BASE_URL")
-REQUEST_TIMEOUT = int(os.getenv("REQUEST_TIMEOUT", 5))
+API_BASE_URL = os.getenv("API_BASE_URL")
+REQUEST_TIMEOUT_SECONDS = int(os.getenv("REQUEST_TIMEOUT", 5))
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
-class TestAPIEndpoints(unittest.TestCase):
+class APIEndpointsTest(unittest.TestCase):
 
     def setUp(self):
-        self.url = f"{BASE_URL}/endpoint"
-        self.payload = {"key": "value"}
+        self.endpoint_url = f"{API_BASE_URL}/endpoint"
+        self.test_payload = {"key": "value"}
     
-    def test_get_endpoint(self):
-        response = requests.get(self.url, timeout=REQUEST_TIMEOUT)
+    def test_GET_Endpoint(self):
+        response = requests.get(self.endpoint_url, timeout=REQUEST_TIMEOUT_SECONDS)
         self.assertEqual(response.status_code, 200)
         
-        data = response.json()
-        self.assertIn("expected_key", data)
+        response_data = response.json()
+        self.assertIn("expected_key", response_data)
         logging.info("GET endpoint test passed.")
 
-    def test_post_endpoint(self):
-        response = requests.post(self.url, json=self.payload, timeout=REQUEST_TIMEOUT)
+    def test_POST_Endpoint(self):
+        response = requests.post(self.endpoint_url, json=self.test_payload, timeout=REQUEST_TIMEOUT_SECONDS)
         self.assertEqual(response.status_code, 201)
         
-        created_data = response.json()
-        self.assertEqual(created_data['key'], self.payload['key'])
+        response_created_data = response.json()
+        self.assertEqual(response_created_data['key'], self.test_payload['key'])
         logging.info("POST endpoint test passed.")
         
-    def test_update_endpoint(self):
-        updated_url = f"{self.url}/id"
+    def test_PATCH_Endpoint(self):
+        update_endpoint_url = f"{self.endpoint_url}/id"
         updated_payload = {"key": "updated_value"}
-        response = requests.patch(updated_url, json=updated_payload, timeout=REQUEST_REQUEST_TIMEOUT)
+        response = requests.patch(update_endpoint_url, json=updated_payload, timeout=REQUEST_TIMEOUT_SECONDS)
         
         self.assertIn(response.status_code, [200, 204])
         
         if response.status_code == 200:
-            updated_data = response.json()
-            self.assertEqual(updated_data['key'], updated_payload['key'])
+            response_updated_data = response.json()
+            self.assertEqual(response_updated_data['key'], updated_payload['key'])
         
         logging.info("UPDATE endpoint test passed.")
 
-    def test_delete_endpoint(self):
-        delete_url = f"{self.url}/id"
-        response = requests.delete(delete_url, timeout=REQUEST_TIMEOUT)
+    def test_DELETE_Endendpoint(self):
+        delete_endpoint_url = f"{self.endpoint_url}/id"
+        response = requests.delete(delete_endpointlarge_url, timeout=REQUEST_TIMEOUT_SECONDS)
         
         self.assertEqual(response.status_code, 204)
         logging.info("DELETE endpoint test passed.")
 
-class TestDataModelIntegrity(unittest.TestCase):
-    def test_data_model_structure(self):
+class DataModelIntegrityTest(unittest.TestCase):
+    def test_DataModelStructure(self):
         self.assertTrue(True, "Assuming data model structure is correctly tested here.")
         logging.info("Data model structure integrity test passed.")
 
-    def test_data_model_relationships(self):
+    def test_DataModelRelationships(self):
         self.assertTrue(True, "Assuming data model relationships are correctly tested here.")
         logging.info("Data model relationships integrity test passed.")
 
